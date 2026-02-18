@@ -3,6 +3,7 @@
 #include <span>
 #include <random>
 #include <algorithm>
+#include <numeric>
 
 struct item{
     double valor;
@@ -10,8 +11,8 @@ struct item{
 };
 
 double calculaFitness(std::span<int> itensEscolhidos, std::span<item> itens, double pesoMax){
-    double peso = 0.0d;
-    double valor = 0.0d;
+    double peso = 0.0;
+    double valor = 0.0;
 
     for(int i = 0; i < itensEscolhidos.size(); i++){
         if(itensEscolhidos[i]){
@@ -45,8 +46,8 @@ int main(int argc, char* agrv[]){
         // Inicia os geradores de números aleatórios
         std::mt19937 mt{ std::random_device{}() };
 
-        std::uniform_real_distribution randValor{0.0d, valorMax}; 
-        std::uniform_real_distribution randPeso{0.0d, mochilaMax * 0.6}; 
+        std::uniform_real_distribution randValor{0.0, valorMax}; 
+        std::uniform_real_distribution randPeso{0.0, mochilaMax * 0.6}; 
 
         std::uniform_int_distribution randCromossomo{0, 1}; 
         
