@@ -33,6 +33,7 @@ double calculaFitness(std::span<int> itensEscolhidos, std::span<item> itens,
 int main(int argc, char *agrv[]) {
   const int quantidadeItens = 10;
   const int tamanhoPopulacao = quantidadeItens * 10;
+  const int maxGeracoes = 50;
   double mochilaMax = 50;
   double valorMax = 1000;
 
@@ -54,8 +55,12 @@ int main(int argc, char *agrv[]) {
 
   std::uniform_int_distribution randCromossomo{0, 1};
 
+  // Distribuição para escolher pontos aleatórios no cruzamento
+  std::uniform_int_distribution randPonto{0, quantidadeItens - 1};
+  
   // Distribuição para indice para fazer a mutação do bitflip
-  std::uniform_int_distribution randItemPopulacaoIndex{0, quantidadeItens};
+  std::uniform_int_distribution randItemPopulacaoIndex{0, quantidadeItens - 1};
+
 
   // Inicia os itens com um valor e peso aleatório
   for (int i = 0; i < quantidadeItens; i++) {
@@ -89,7 +94,7 @@ int main(int argc, char *agrv[]) {
       vencedoresTorneio;
   int indexTorneio;
   int geracao = 1;
-  while (true) {
+  while (geracao < maxGeracoes) {
     for (int j = 0; j < tamanhoPopulacao; j++) {
       fitness[j] = calculaFitness(populacao[j], itens, mochilaMax);
     }
@@ -98,9 +103,6 @@ int main(int argc, char *agrv[]) {
     for (int j = 0; j < tamanhoPopulacao; j++) {
       std::cout << "Fitness " << j << ": " << fitness[j] << "\n";
     }
-
-    if (geracao == 1)
-      break;
 
     // O torneio seleciona um quarto da população por rodada, então o processo
     // todo deve ser executado 4 vezes para preencher a nova população
@@ -120,16 +122,42 @@ int main(int argc, char *agrv[]) {
         indexTorneio++;
       }
 
-      // Crossover
+      // Cruzamento
+      int novaIndex = j * (tamanhoPopulacao / 4);
+
+      for (int i = 0; i + 1 < indexTorneio; i += 2) {
+        auto& pai1 = vencedoresTorneio[i];
+        auto& pai2 = vencedoresTorneio[i + 1];
+
+        // Escolhe 2 pontos p1 e p2 aleatoriamente
+        int ponto1 = randPonto(mt);
+        int ponto2 = randPonto(mt);
+
+        if (ponto1 > ponto2)
+            std::swap(ponto1, ponto2);
+
+        std::array<int, quantidadeItens> filho1 = pai1;
+        std::array<int, quantidadeItens> filho2 = pai2;
+
+        // Troca o segmento entre ponto1 e ponto2
+        for (int k = ponto1; k <= ponto2; k++) {
+            filho1[k] = pai2[k];
+            filho2[k] = pai1[k];
+        }
+
+        // Coloca os filhos de volta na população
+        populacao[novaIndex++] = filho1;
+        populacao[novaIndex++] = filho2;
+    }
 
       // Mutação
       for (int i = 0; i < tamanhoPopulacao; i++) {
         for (int k = 0; k < MUTATION_BITS_AFFECTED; k++) {
           int indexToFlip = randItemPopulacaoIndex(mt);
-          if (populacao[indexToFlip][i] == 1) {
-            populacao[indexToFlip][i] = 0;
+          if (populacao[i][indexToFlip] == 1) {
+            populacao[i][indexToFlip] = 0;
           } else {
-            populacao[indexToFlip][i] = 1;
+            populacao[i][indexToFlip] = 1;
           }
         }
       }
