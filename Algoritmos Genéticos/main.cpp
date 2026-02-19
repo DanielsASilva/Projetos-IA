@@ -80,7 +80,13 @@ int main(int argc, char* agrv[]){
         std::array<std::array<int, quantidadeItens>, tamanhoPopulacao / 4> vencedoresTorneio;
         int indexTorneio;
         int geracao = 1;
-        while(true){
+
+        // Inicializando array onde será armazenada a população pós-cruzamento
+        // randPoto: Pontos a serem selecionados aleatoriamente
+        std::array<std::array<int, quantidadeItens>, tamanhoPopulacao> novaPopulacao;
+        std::uniform_int_distribution<int> randPonto(0, quantidadeItens - 1);
+
+        while(geracao < 50){
             for(int j = 0; j < tamanhoPopulacao; j++){
                 fitness[j] = calculaFitness(populacao[j], itens, mochilaMax);
             }
@@ -89,10 +95,6 @@ int main(int argc, char* agrv[]){
             for(int j = 0; j < tamanhoPopulacao; j++){
                 std::cout << "Fitness " << j << ": " << fitness[j] << "\n"; 
             }
-            
-            if(geracao == 1)
-                break;
-        
             
             // O torneio seleciona um quarto da população por rodada, então o processo todo
             // deve ser executado 4 vezes para preencher a nova população
@@ -113,10 +115,39 @@ int main(int argc, char* agrv[]){
                 }
                 
                 // Crossover
+                int novaIndex = j * (tamanhoPopulacao / 4);
+
+                for(int i = 0; i + 1 < vencedoresTorneio.size(); i += 2){
+                    auto& pai1 = vencedoresTorneio[i];
+                    auto& pai2 = vencedoresTorneio[i + 1];
+
+                    int ponto1 = randPonto(mt);
+                    int ponto2 = randPonto(mt);
+
+                    if(ponto1 > ponto2)
+                        std::swap(ponto1, ponto2);
+
+                    std::array<int, quantidadeItens> filho1;
+                    std::array<int, quantidadeItens> filho2;
+
+                    for(int g = 0; g < quantidadeItens; g++){
+                        if(g < ponto1 || g > ponto2){
+                            filho1[g] = pai1[g];
+                            filho2[g] = pai2[g];
+                        } else {
+                            filho1[g] = pai2[g];
+                            filho2[g] = pai1[g];
+                        }
+                    }
+
+                    novaPopulacao[novaIndex++] = filho1;
+                    novaPopulacao[novaIndex++] = filho2;
+                }
         
                 // Mutação
             }   
             geracao++;
+
             
         }
 
