@@ -1,137 +1,185 @@
-#include <iostream>
-#include <array>
-#include <span>
-#include <random>
 #include <algorithm>
+#include <array>
+#include <iostream>
+#include <numeric>
+#include <random>
+#include <span>
 
-struct item{
-    double valor;
-    double peso;
+#define MUTATION_BITS_AFFECTED 1
+
+struct item {
+  double valor;
+  double peso;
 };
 
-double calculaFitness(std::span<int> itensEscolhidos, std::span<item> itens, double pesoMax){
-    double peso = 0.0d;
-    double valor = 0.0d;
+double calculaFitness(std::span<int> itensEscolhidos, std::span<item> itens,
+                      double pesoMax) {
+  double peso = 0.0;
+  double valor = 0.0;
 
-    for(int i = 0; i < itensEscolhidos.size(); i++){
-        if(itensEscolhidos[i]){
-            peso += itens[i].peso;
-            valor += itens[i].valor;
-        }
+  for (int i = 0; i < itensEscolhidos.size(); i++) {
+    if (itensEscolhidos[i]) {
+      peso += itens[i].peso;
+      valor += itens[i].valor;
     }
+  }
 
-    if(peso > pesoMax)
-        return 0;
-    else
-        return valor;
+  if (peso > pesoMax)
+    return 0;
+  else
+    return valor;
 }
 
-int main(int argc, char* agrv[]){
-        const int quantidadeItens = 10;
-        const int tamanhoPopulacao = quantidadeItens * 10;
-        double mochilaMax = 50;
-        double valorMax = 1000;
+int main(int argc, char *agrv[]) {
+  const int quantidadeItens = 10;
+  const int tamanhoPopulacao = quantidadeItens * 10;
+  const int maxGeracoes = 50;
+  double mochilaMax = 50;
+  double valorMax = 1000;
 
-        /* Comentado para facilitar o teste
-        std::cout << "Qual a capacidade máxima da mochila? ";
-        std::cin >> mochilaMax;
+  /* Comentado para facilitar o teste
+  std::cout << "Qual a capacidade máxima da mochila? ";
+  std::cin >> mochilaMax;
 
-        std::cout << "Qual o valor máximo possível para um item? ";
-        std::cin >> valorMax;
-        */
+  std::cout << "Qual o valor máximo possível para um item? ";
+  std::cin >> valorMax;
+  */
 
-        std::array<item, quantidadeItens> itens;
-        
-        // Inicia os geradores de números aleatórios
-        std::mt19937 mt{ std::random_device{}() };
+  std::array<item, quantidadeItens> itens;
 
-        std::uniform_real_distribution randValor{0.0d, valorMax}; 
-        std::uniform_real_distribution randPeso{0.0d, mochilaMax * 0.6}; 
+  // Inicia os geradores de números aleatórios
+  std::mt19937 mt{std::random_device{}()};
 
-        std::uniform_int_distribution randCromossomo{0, 1}; 
-        
-        // Inicia os itens com um valor e peso aleatório
-        for(int i = 0; i < quantidadeItens; i++){
-            itens[i].valor = randValor(mt);
-            itens[i].peso  = randPeso(mt);
+  std::uniform_real_distribution randValor{0.0, valorMax};
+  std::uniform_real_distribution randPeso{0.0, mochilaMax * 0.6};
+
+  std::uniform_int_distribution randCromossomo{0, 1};
+
+  // Distribuição para escolher pontos aleatórios no cruzamento
+  std::uniform_int_distribution randPonto{0, quantidadeItens - 1};
+  
+  // Distribuição para indice para fazer a mutação do bitflip
+  std::uniform_int_distribution randItemPopulacaoIndex{0, quantidadeItens - 1};
+
+
+  // Inicia os itens com um valor e peso aleatório
+  for (int i = 0; i < quantidadeItens; i++) {
+    itens[i].valor = randValor(mt);
+    itens[i].peso = randPeso(mt);
+  }
+
+  for (int i = 0; i < quantidadeItens; i++) {
+    std::cout << "Valor: " << itens[i].valor << " Peso: " << itens[i].peso
+              << "\n";
+  }
+
+  // A população é formada por um array de cromossomos, nesse caso, o cromossomo
+  // é um array de valores binários que representam se um item foi escolhido ou
+  // não
+  std::array<std::array<int, quantidadeItens>, tamanhoPopulacao> populacao;
+  std::array<double, tamanhoPopulacao> fitness;
+
+  // Inicia a população escolhendo itens aleatórios
+  for (int i = 0; i < tamanhoPopulacao; i++) {
+    for (int j = 0; j < quantidadeItens; j++) {
+      populacao[i][j] = randCromossomo(mt);
+    }
+  }
+
+  // Inicializando array com indices para o torneio
+  std::array<int, tamanhoPopulacao> indices;
+  std::iota(indices.begin(), indices.end(), 0);
+
+  std::array<std::array<int, quantidadeItens>, tamanhoPopulacao / 4>
+      vencedoresTorneio;
+  int indexTorneio;
+  int geracao = 1;
+  while (geracao < maxGeracoes) {
+    for (int j = 0; j < tamanhoPopulacao; j++) {
+      fitness[j] = calculaFitness(populacao[j], itens, mochilaMax);
+    }
+
+    std::cout << "Geração " << geracao << ": \n";
+    for (int j = 0; j < tamanhoPopulacao; j++) {
+      std::cout << "Fitness " << j << ": " << fitness[j] << "\n";
+    }
+
+    // O torneio seleciona um quarto da população por rodada, então o processo
+    // todo deve ser executado 4 vezes para preencher a nova população
+    for (int j = 0; j < 4; j++) {
+      // Torneio
+      // Embaralha os itens para escolher cromossomos aleatórios
+      std::shuffle(indices.begin(), indices.end(), mt);
+
+      indexTorneio = 0;
+      // Escolhe metade da população embaralhada e compara os valores de fitness
+      // de 2 em 2, os que possuirem maior fitness são escolhidos
+      for (int i = 0; i < (tamanhoPopulacao / 2) - 1; i += 2) {
+        if (fitness[indices[i]] >= fitness[indices[i + 1]])
+          vencedoresTorneio[indexTorneio] = populacao[indices[i]];
+        else
+          vencedoresTorneio[indexTorneio] = populacao[indices[i + 1]];
+        indexTorneio++;
+      }
+
+      // Cruzamento
+      int novaIndex = j * (tamanhoPopulacao / 4);
+
+      for (int i = 0; i + 1 < indexTorneio; i += 2) {
+        auto& pai1 = vencedoresTorneio[i];
+        auto& pai2 = vencedoresTorneio[i + 1];
+
+        // Escolhe 2 pontos p1 e p2 aleatoriamente
+        int ponto1 = randPonto(mt);
+        int ponto2 = randPonto(mt);
+
+        if (ponto1 > ponto2)
+            std::swap(ponto1, ponto2);
+
+        std::array<int, quantidadeItens> filho1 = pai1;
+        std::array<int, quantidadeItens> filho2 = pai2;
+
+        // Troca o segmento entre ponto1 e ponto2
+        for (int k = ponto1; k <= ponto2; k++) {
+            filho1[k] = pai2[k];
+            filho2[k] = pai1[k];
         }
 
-        for(int i = 0; i < quantidadeItens; i++){
-            std::cout << "Valor: " << itens[i].valor << " Peso: " << itens[i].peso << "\n";
-        }
-        
-        // A população é formada por um array de cromossomos, nesse caso, o cromossomo é um
-        // array de valores binários que representam se um item foi escolhido ou não
-        std::array<std::array<int, quantidadeItens>, tamanhoPopulacao> populacao;
-        std::array<double, tamanhoPopulacao> fitness;
-        
-        // Inicia a população escolhendo itens aleatórios
-        for(int i = 0; i < tamanhoPopulacao; i++){
-            for(int j = 0; j < quantidadeItens; j++){
-                populacao[i][j] = randCromossomo(mt);
-            }
-        }
-        
-        // Inicializando array com indices para o torneio
-        std::array<int, tamanhoPopulacao> indices;
-        std::iota(indices.begin(), indices.end(), 0);
-        
-        std::array<std::array<int, quantidadeItens>, tamanhoPopulacao / 4> vencedoresTorneio;
-        int indexTorneio;
-        int geracao = 1;
-        while(true){
-            for(int j = 0; j < tamanhoPopulacao; j++){
-                fitness[j] = calculaFitness(populacao[j], itens, mochilaMax);
-            }
-            
-            std::cout << "Geração " << geracao << ": \n";
-            for(int j = 0; j < tamanhoPopulacao; j++){
-                std::cout << "Fitness " << j << ": " << fitness[j] << "\n"; 
-            }
-            
-            if(geracao == 1)
-                break;
-        
-            
-            // O torneio seleciona um quarto da população por rodada, então o processo todo
-            // deve ser executado 4 vezes para preencher a nova população
-            for(int j = 0; j < 4; j++){
-                // Torneio
-                // Embaralha os itens para escolher cromossomos aleatórios
-                std::shuffle(indices.begin(), indices.end(), mt);
-                
-                indexTorneio = 0;
-                // Escolhe metade da população embaralhada e compara os valores de fitness
-                // de 2 em 2, os que possuirem maior fitness são escolhidos
-                for(int i = 0; i < (tamanhoPopulacao / 2) - 1; i += 2){
-                    if(fitness[indices[i]] >= fitness[indices[i + 1]])
-                        vencedoresTorneio[indexTorneio] = populacao[indices[i]];
-                    else
-                        vencedoresTorneio[indexTorneio] = populacao[indices[i + 1]];
-                    indexTorneio++;
-                }
-                
-                // Crossover
-        
-                // Mutação
-            }   
-            geracao++;
-            
-        }
+        // Coloca os filhos de volta na população
+        populacao[novaIndex++] = filho1;
+        populacao[novaIndex++] = filho2;
+    }
 
-        auto maxIndex = std::max_element(fitness.begin(), fitness.end());
-        int index = maxIndex - fitness.begin();
-        
-        double pesoTotal = 0;
-        double valorTotal = 0;
-        std::cout << "O individuo " << index << " foi selecionado:\n";
-        for(int i = 0; i < populacao[index].size(); i++){
-            if(populacao[index][i]){
-                std::cout << "Item " << i << " | " << "Valor: " << itens[i].valor << " Peso: " << itens[i].peso << "\n";
-                valorTotal += itens[i].valor;
-                pesoTotal  += itens[i].peso;
-            }
-        }    
-        std::cout << "Valor Total: " << valorTotal << " Peso total: " << pesoTotal << std::endl; 
-    return 0;
+      // Mutação
+      for (int i = 0; i < tamanhoPopulacao; i++) {
+        for (int k = 0; k < MUTATION_BITS_AFFECTED; k++) {
+          int indexToFlip = randItemPopulacaoIndex(mt);
+          if (populacao[i][indexToFlip] == 1) {
+            populacao[i][indexToFlip] = 0;
+          } else {
+            populacao[i][indexToFlip] = 1;
+          }
+        }
+      }
+    }
+    geracao++;
+  }
+
+  auto maxIndex = std::max_element(fitness.begin(), fitness.end());
+  int index = maxIndex - fitness.begin();
+
+  double pesoTotal = 0;
+  double valorTotal = 0;
+  std::cout << "O individuo " << index << " foi selecionado:\n";
+  for (int i = 0; i < populacao[index].size(); i++) {
+    if (populacao[index][i]) {
+      std::cout << "Item " << i << " | " << "Valor: " << itens[i].valor
+                << " Peso: " << itens[i].peso << "\n";
+      valorTotal += itens[i].valor;
+      pesoTotal += itens[i].peso;
+    }
+  }
+  std::cout << "Valor Total: " << valorTotal << " Peso total: " << pesoTotal
+            << std::endl;
+  return 0;
 }
