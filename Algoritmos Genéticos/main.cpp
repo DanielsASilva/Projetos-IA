@@ -168,6 +168,11 @@ int main(int argc, char *agrv[]) {
     fitness[j] = calculaFitness(populacao[j], itens, mochilaMax);
   }
 
+  std::cout << "Geração " << geracao << ": \n";
+  for (int j = 0; j < tamanhoPopulacao; j++) {
+    std::cout << "Fitness " << j << ": " << fitness[j] << "\n";
+  }
+
   auto maxIndex = std::max_element(fitness.begin(), fitness.end());
   int index = maxIndex - fitness.begin();
 
