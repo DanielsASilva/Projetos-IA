@@ -210,7 +210,7 @@ int main() {
         }
     }
 
-    // Log dos Resultados (Saída formatada)
+    // Log dos Resultados
     for (int i = 0; i < QTD_GRUPOS; ++i) {
         std::cout << "========================================\n";
         std::cout << "Grupo " << i << " - Tema: " << grupos_finais[i].tema.nome << "\n";
