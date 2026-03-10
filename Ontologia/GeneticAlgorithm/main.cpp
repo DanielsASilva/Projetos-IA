@@ -169,7 +169,7 @@ int main() {
         grupos_finais[grupo_id].alunos.push_back(lista_alunos[i]);
     }
 
-    // Parte dos Entregáveis (Integrando sua lógica de proximidade)
+    // Entregáveis
     std::vector<Entregavel> entregaveis = {
         {.nome = "Entrega 1", .conteudo = "...", .nota = 0, .grupo = &grupos_finais[0], .professor = &professores[0]},
         {.nome = "Entrega 2", .conteudo = "...", .nota = 0, .grupo = &grupos_finais[1], .professor = NULL}, // Precisa de atribuição
