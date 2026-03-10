@@ -4,16 +4,24 @@
 #include <random>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <cfloat>
+
+// Enumerações para Curso e Tema (conforme seu modelo)
+typedef enum { ENGENHARIA, CIENCIA, DADOS } Curso;
+typedef enum { ARVORE_BINARIA, GRAFO, STACK, QUEUE, ARRAY } TemaEnum;
 
 // Structs
 struct Aluno {
     unsigned long matricula;
     std::string nome;
     uint64_t cpf;
+    Curso curso; // Adicionado para cálculo do entregável
 };
 
 struct Tema {
     std::string nome;
+    TemaEnum tipo; // Adicionado para cálculo de distância
 };
 
 struct Grupo {
@@ -21,7 +29,20 @@ struct Grupo {
     Tema tema;
 };
 
-// Global Constants
+struct Professor {
+    unsigned long inscricao;
+    std::string nome;
+};
+
+struct Entregavel {
+    std::string nome;
+    std::string conteudo;
+    float nota;
+    Grupo *grupo;
+    Professor *professor;
+};
+
+// Constantes Globais
 const int POPULACAO_SIZE = 50;
 const int GERACOES = 100;
 const float TAXA_MUTACAO = 0.1f;
@@ -57,14 +78,9 @@ const std::string nomes_disponiveis[] = {
     "Alexandro", "Mario", "Hugo", "Maria", "Ana", "Vanessa", "Lara",
     "Gabriele", "Joana", "Raquel", "Luana", "Wanda", "Rafaela"};
 
-Aluno aluno_new_random() {
-    std::uniform_int_distribution<int> dist_nome(0, 19);
-    return { (unsigned long)rand()%1000, nomes_disponiveis[dist_nome(rng)], 12345678901 };
-}
-
 // Funções para o Algoritmo Genético
 
-// Crossover 1-point (Metade-Metade)
+// Crossover: 1-point (Metade-Metade)
 Individuo crossover(const Individuo& p1, const Individuo& p2) {
     Individuo filho;
     std::uniform_int_distribution<int> dist_ponto(0, p1.genes.size() - 1);
@@ -88,13 +104,32 @@ void mutacao(Individuo& ind) {
 }
 
 int main() {
-    // 1. Setup inicial
+    // Setup inicial de Alunos e Professores
     std::vector<Aluno> lista_alunos;
-    for(int i=0; i<20; ++i) lista_alunos.push_back(aluno_new_random());
+    for(int i = 0; i < 20; i++) {
+        lista_alunos.push_back({
+            (unsigned long)202400 + i, 
+            nomes_disponiveis[i], // Evitar duplicatas
+            10000000000ULL + i,
+            static_cast<Curso>(rand() % 3)
+        });
+    }
 
-    std::vector<Tema> temas = {{"Arvore Binaria"}, {"Grafo"}, {"Stack"}, {"Queue"}, {"Array"}};
+    Professor professores[] = {
+        {.inscricao = 1, .nome = "Professor 1"},
+        {.inscricao = 2, .nome = "Professor 2"},
+        {.inscricao = 3, .nome = "Professor 3"},
+    };
 
-    // 2. Criando População Inicial Aleatória
+    std::vector<Tema> temas = {
+        {"Arvore Binaria", ARVORE_BINARIA}, 
+        {"Grafo", GRAFO}, 
+        {"Stack", STACK}, 
+        {"Queue", QUEUE}, 
+        {"Array", ARRAY}
+    };
+
+    // Criando População Inicial Aleatória
     std::vector<Individuo> populacao(POPULACAO_SIZE);
     std::uniform_int_distribution<int> dist_grupo(0, QTD_GRUPOS - 1);
 
@@ -103,22 +138,20 @@ int main() {
         ind.calcular_fitness();
     }
 
-    // 3. Ciclo Genético Principal
+    // Loop Principal
     for (int g = 0; g < GERACOES; ++g) {
         std::sort(populacao.begin(), populacao.end(), [](const Individuo& a, const Individuo& b) {
             return a.fitness > b.fitness;
         });
 
-        if (populacao[0].fitness == 1.0) break; // Solução perfeita encontrada
+        if (populacao[0].fitness == 1.0) break; 
 
         std::vector<Individuo> nova_pop;
-
-        // Seleção Elitismo: mantém os 2 melhores
         nova_pop.push_back(populacao[0]);
         nova_pop.push_back(populacao[1]);
 
         while (nova_pop.size() < POPULACAO_SIZE) {
-            Individuo filho = crossover(populacao[0], populacao[1]); // Crossover simples com os melhores
+            Individuo filho = crossover(populacao[0], populacao[1]); 
             mutacao(filho);
             filho.calcular_fitness();
             nova_pop.push_back(filho);
@@ -126,7 +159,7 @@ int main() {
         populacao = nova_pop;
     }
 
-    // 4. Resultado Final
+    // Escolhendo melhores indivíduos da população
     Individuo melhor = populacao[0];
     std::vector<Grupo> grupos_finais(QTD_GRUPOS);
     for(int i=0; i<QTD_GRUPOS; ++i) grupos_finais[i].tema = temas[i];
@@ -136,10 +169,57 @@ int main() {
         grupos_finais[grupo_id].alunos.push_back(lista_alunos[i]);
     }
 
-    // Log dos Resultados
+    // Parte dos Entregáveis (Integrando sua lógica de proximidade)
+    std::vector<Entregavel> entregaveis = {
+        {.nome = "Entrega 1", .conteudo = "...", .nota = 0, .grupo = &grupos_finais[0], .professor = &professores[0]},
+        {.nome = "Entrega 2", .conteudo = "...", .nota = 0, .grupo = &grupos_finais[1], .professor = NULL}, // Precisa de atribuição
+        {.nome = "Entrega 3", .conteudo = "...", .nota = 0, .grupo = &grupos_finais[2], .professor = &professores[1]},
+        {.nome = "Entrega 4", .conteudo = "...", .nota = 0, .grupo = &grupos_finais[3], .professor = NULL}, // Precisa de atribuição
+        {.nome = "Entrega 5", .conteudo = "...", .nota = 0, .grupo = &grupos_finais[4], .professor = &professores[2]}
+    };
+
+    // K-Nearest Neighbours para alocar os professores
+    for (int i = 0; i < 5; i++) {
+        if (entregaveis[i].professor == NULL) {
+            float media_curso = 0.0;
+            for (Aluno a : entregaveis[i].grupo->alunos) media_curso += static_cast<int>(a.curso);
+            media_curso /= entregaveis[i].grupo->alunos.size();
+
+            float min_distance = FLT_MAX;
+            Professor *closest_professor = NULL;
+
+            for (int j = 0; j < 5; j++) {
+                if (j == i || entregaveis[j].professor == NULL) continue;
+
+                float media_curso_vizinho = 0.0;
+                for (Aluno a : entregaveis[j].grupo->alunos) media_curso_vizinho += static_cast<int>(a.curso);
+                media_curso_vizinho /= entregaveis[j].grupo->alunos.size();
+
+                float distance = std::sqrt(
+                    std::pow((media_curso - media_curso_vizinho), 2) +
+                    std::pow((static_cast<int>(entregaveis[i].grupo->tema.tipo) - 
+                              static_cast<int>(entregaveis[j].grupo->tema.tipo)), 2)
+                );
+
+                if (distance < min_distance) {
+                    min_distance = distance;
+                    closest_professor = entregaveis[j].professor;
+                }
+            }
+            entregaveis[i].professor = closest_professor;
+        }
+    }
+
+    // Log dos Resultados (Saída formatada)
     for (int i = 0; i < QTD_GRUPOS; ++i) {
-        std::cout << "=== Grupo " << i << " (" << grupos_finais[i].tema.nome << ") ===\n";
-        for (const auto& a : grupos_finais[i].alunos) std::cout << "- " << a.nome << "\n";
+        std::cout << "========================================\n";
+        std::cout << "Grupo " << i << " - Tema: " << grupos_finais[i].tema.nome << "\n";
+        std::cout << "Professor: " << entregaveis[i].professor->nome << "\n";
+        std::cout << "integrantes: \n";
+        for (const auto& a : grupos_finais[i].alunos) {
+            std::cout << "- " << a.nome << " (Curso: " << a.curso << ")\n";
+        }
+        std::cout << "========================================\n";
     }
 
     return 0;
