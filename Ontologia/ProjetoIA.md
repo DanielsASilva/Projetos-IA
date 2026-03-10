@@ -20,18 +20,20 @@
 - Aluno ou Professor cria Grupo
     - cria (Aluno -> Grupo)
     - cria (Professor -> Grupo)
+- Professor atribui nota
+    - atribui_nota (Professor -> Entegrável)
 
 ## Propriedades
 
-- Aluno: matricula, nome, cpf
+- Aluno: matricula, nome, cpf, curso
 - Professor: inscricao, nome
 - Tema: nome
 - Grupo: numero
-- Entregável: nome, conteudo
+- Entregável: nome, conteudo, nota
 
 - Aluno -> pertence -> Grupo
 - Grupo -> entrega -> Entregavel
-- Professor -> recebe -> Entregável
+- Professor -> atribui_nota -> Entregável
 - Grupo -> contem -> Tema
 
 ## Restrições Semânticas
@@ -40,4 +42,4 @@
 - Todo Aluno deve pertencer a um grupo
 - Um Grupo deve ter pelo menos um Aluno
 - Um Grupo deve ter pelo menos um Tema
-
+- Um professor deve atribuir nota
